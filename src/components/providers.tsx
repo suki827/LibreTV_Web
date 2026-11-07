@@ -8,7 +8,7 @@ import { ThemeProvider } from './theme';
 import { GlobalDownloadManager } from './download-manager';
 import { useAppStore, hydrateLiveProbeResults } from '@/lib/store';
 import { api, STATUS_QUERY_KEY } from '@/lib/client-api';
-import { applyEnvPresets } from '@/lib/subscription-sync';
+import { ServerSourceSettings } from './server-source-settings';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -34,12 +34,6 @@ export function Providers({ children }: { children: ReactNode }) {
         // 与 AuthProvider 共用同一 query key，/api/status 全站只发一次
         return queryClient.fetchQuery({ queryKey: STATUS_QUERY_KEY, queryFn: () => api.status() });
       })
-      .then((d) => {
-        // 预置数据（DEFAULT_SOURCES / DEFAULT_LIVE_SOURCES / DEFAULT_SUBSCRIPTIONS）
-        // 预置订阅要经鉴权接口拉取，首屏这次可能发生在登录之前而 401 静默失败；
-        // 登录成功后由 AuthProvider 再调一次 applyEnvPresets 补齐（函数幂等）
-        if (d) return applyEnvPresets(d);
-      })
       .catch(() => {});
   }, [queryClient]);
 
@@ -50,7 +44,7 @@ export function Providers({ children }: { children: ReactNode }) {
           {/* 全站常驻：下载事件监听（enqueueDownload）依赖它存在——
               挂在 Header 里会让 /watch 等不渲染 Header 的页面派发的事件凭空丢失 */}
           <GlobalDownloadManager />
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider><ServerSourceSettings>{children}</ServerSourceSettings></AuthProvider>
         </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>

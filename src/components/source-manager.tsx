@@ -27,6 +27,8 @@ import { exportConfig, importConfig } from '@/lib/db';
 import { PERSIST_KEY } from '@/lib/persist-storage';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useAuth } from './auth';
+import { importSharedSources } from './server-source-settings';
+import { parseImportedSourceSettings } from '@/lib/source-settings';
 import { api } from '@/lib/client-api';
 import { syncSourceSubscription } from '@/lib/subscription-sync';
 import { describeParseStats } from '@/lib/tvbox-parser';
@@ -1104,7 +1106,11 @@ function ConfigIoPanel() {
   const confirmImport = async () => {
     if (!pending) return;
     try {
-      await importConfig(await pending.file.text());
+      const text = await pending.file.text();
+      const config = JSON.parse(text) as { data?: Record<string, string> };
+      const settings = config.data?.[PERSIST_KEY];
+      if (settings) await importSharedSources(parseImportedSourceSettings(JSON.parse(settings).state));
+      await importConfig(text);
       setPending(null);
       toast('配置导入成功，即将刷新页面', 'success');
       setTimeout(() => window.location.reload(), 1500);
@@ -1115,7 +1121,7 @@ function ConfigIoPanel() {
 
   return (
     <section>
-      <SectionTitle title="配置导入导出" hint="导出/导入包含数据源、订阅与偏好设置的整机配置" />
+      <SectionTitle title="配置导入导出" hint="源和订阅自动保存在服务器；导入会更新所有设备使用的共享源配置" />
       <div className="flex gap-2">
         <button className="btn-ghost flex-1 text-xs" onClick={doExport}>
           导出配置
@@ -1140,7 +1146,7 @@ function ConfigIoPanel() {
         open={pending !== null}
         danger
         title="导入配置并覆盖当前数据？"
-        message={pending ? `${pending.summary}。导入后将立即刷新页面，当前设备上的配置与观看历史会被覆盖。` : undefined}
+        message={pending ? `${pending.summary}。源和订阅会覆盖所有设备使用的共享配置；偏好设置与观看历史仅影响本机。导入后将刷新页面。` : undefined}
         confirmLabel="导入并覆盖"
         onCancel={() => setPending(null)}
         onConfirm={confirmImport}
