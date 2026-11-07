@@ -1,0 +1,42 @@
+name: libretv-smart-tv-dev
+services:
+  smart-tv-api:
+    build:
+      context: .
+    image: libretv-smart-tv-api:0.1.0-dev
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 40s
+    ports:
+      - "${SMART_TV_BIND_ADDRESS:-127.0.0.1}:${SMART_TV_PORT:-8081}:8081"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8081
+      LIBRETV_URL: ${LIBRETV_URL:-http://libretv:8080}
+      LIBRETV_PASSWORD: ${LIBRETV_PASSWORD:?Set a development LibreTV password}
+      SMART_TV_API_TOKEN: ${SMART_TV_API_TOKEN:?Set an independent TV token of at least 32 characters}
+      DATABASE_PATH: /app/data/smart-tv.sqlite
+      UPSTREAM_TIMEOUT_MS: ${UPSTREAM_TIMEOUT_MS:-12000}
+      OPERATION_TIMEOUT_MS: ${OPERATION_TIMEOUT_MS:-30000}
+      UPSTREAM_CONCURRENCY: ${UPSTREAM_CONCURRENCY:-2}
+      MAX_RESPONSE_BYTES: ${MAX_RESPONSE_BYTES:-2097152}
+      MAX_SOURCES: ${MAX_SOURCES:-500}
+      MAX_SEARCH_RESULTS: ${MAX_SEARCH_RESULTS:-1000}
+      MAX_ACTIVE_REQUESTS: ${MAX_ACTIVE_REQUESTS:-8}
+      FILTER_ADULT: ${FILTER_ADULT:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - smart-tv-data:/app/data
+    networks:
+      - libretv
+    mem_limit: 384m
+    cpus: 1.0
+    pids_limit: 100
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+networks:
+  libretv:
+    external: true
+    name: ${LIBRETV_NETWORK:-libretv_default}
+volumes:
+  smart-tv-data:
