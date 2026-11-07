@@ -20,6 +20,3 @@ docker-compose.yml
 docs
 README.md
 LICENSE
-
-# Standalone Smart TV service has its own image/build context
-smart-tv-api
