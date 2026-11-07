@@ -26,9 +26,6 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
-ENV SOURCE_SETTINGS_DIR=/app/data
-
 USER nextjs
 
 EXPOSE 8080

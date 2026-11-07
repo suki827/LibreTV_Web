@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, onUnauthorized, STATUS_QUERY_KEY } from '@/lib/client-api';
+import { applyEnvPresets } from '@/lib/subscription-sync';
+import type { AuthStatusResponse } from '@/lib/types';
 import { useToast } from './toast';
 
 /**
@@ -95,7 +97,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 登录前以 401 失败的查询（如豆瓣推荐）需要重新拉取
     queryClient.invalidateQueries();
     toast('验证成功', 'success');
-    // Shared sources and deployment presets load in ServerSourceSettings after verification.
+    // 预置订阅（DEFAULT_SUBSCRIPTIONS）的首屏同步发生在登录之前，会 401 静默失败，
+    // 这里用缓存中的 /api/status 补跑一次（缓存缺失时回落为一次请求）
+    try {
+      const cached = queryClient.getQueryData<AuthStatusResponse>(STATUS_QUERY_KEY);
+      const status =
+        cached ??
+        (await queryClient.fetchQuery<AuthStatusResponse>({
+          queryKey: STATUS_QUERY_KEY,
+          queryFn: () => api.status(),
+          staleTime: 0,
+        }));
+      if (status) await applyEnvPresets(status);
+    } catch {
+      // 补拉预置数据失败不影响登录后的正常使用
+    }
   }, [toast, queryClient]);
 
   return (
